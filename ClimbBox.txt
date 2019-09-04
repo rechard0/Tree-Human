@@ -1,0 +1,78 @@
+AClimbBox::AClimbBox()
+{
+	PrimaryActorTick.bCanEverTick = true;
+
+	ClimbBoxComp = CreateDefaultSubobject<UBoxComponent>(TEXT("ClimbBoxComp"));
+	ClimbBoxComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+	ClimbBoxComp->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap);
+	ClimbBoxComp->SetWorldScale3D(FVector(5.f, 5.f, 5.f));
+	RootComponent = ClimbBoxComp;
+
+	bIsGrip = false;
+
+	UpPosition = 500.f;
+	ForwardPosition = 300.f;
+}
+
+void AClimbBox::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	MyPc = Cast<APlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+	Player = Cast<ACharacter>(MyPc->GetPawn());
+
+	if (ClimbBoxComp)
+	{
+		ClimbBoxComp->OnComponentBeginOverlap.AddDynamic(this, &AClimbBox::OnOverlapBegin);
+		ClimbBoxComp->OnComponentEndOverlap.AddDynamic(this, &AClimbBox::OnOverlapEnd);
+	}
+}
+
+void AClimbBox::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+}
+
+void AClimbBox::OnOverlapBegin(class UPrimitiveComponent* OverlapedComponent, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (Player->GetCharacterMovement()->IsFalling())
+	{
+		bIsGrip = true;
+		Player->GetCharacterMovement()->MovementMode = EMovementMode::MOVE_Flying;
+		Player->SetActorLocation(FVector(Player->GetActorLocation().X, Player->GetActorLocation().Y, this->GetActorLocation().Z));
+		Player->GetCharacterMovement()->StopMovementImmediately();
+		Player->PlayAnimMontage(ClimbStart);
+	}
+
+	if (bIsGrip == true)
+	{
+		FTimerHandle TimerHandle_MiddleClimb;
+		FTimerHandle TimerHandle_CompleteClimb;
+
+		GetWorldTimerManager().SetTimer(TimerHandle_MiddleClimb, this, &AClimbBox::MiddleClimb, 0.7f, false);
+		GetWorldTimerManager().SetTimer(TimerHandle_CompleteClimb, this, &AClimbBox::CompleteClimb, 1, false);
+	}
+}
+
+void AClimbBox::MiddleClimb()
+{
+	FVector EndVectorUp = Player->GetActorUpVector() * UpPosition;
+	Player->LaunchCharacter(EndVectorUp, true, true);
+}
+
+void AClimbBox::CompleteClimb()
+{
+	FVector EndVectorForward = Player->GetActorForwardVector() * ForwardPosition;
+	Player->LaunchCharacter(EndVectorForward, true, true);
+	Player->PlayAnimMontage(ClimbEnd);
+	Player->GetCharacterMovement()->MovementMode = EMovementMode::MOVE_Walking;
+}
+
+void AClimbBox::OnOverlapEnd(class UPrimitiveComponent* OverlappingComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherbodyIndex)
+{
+	bIsGrip = false;
+	Player->GetCharacterMovement()->MovementMode = EMovementMode::MOVE_Walking;
+	Player->StopAnimMontage(ClimbStart);
+	Player->StopAnimMontage(ClimbEnd);
+}

@@ -1,0 +1,21 @@
+UCLASS()
+class HUMANTREE_API AArmor : public AActor
+{
+	GENERATED_BODY()
+	
+public:	
+	AArmor();
+
+protected:
+	virtual void BeginPlay() override;
+
+public:	
+	virtual void Tick(float DeltaTime) override;
+
+	void RemoveArmor();
+
+private:
+	UPROPERTY(VisibleDefaultsOnly, Category = "Armor")
+		class USkeletalMeshComponent* ArmorMesh;
+	
+};

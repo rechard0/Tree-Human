@@ -1,0 +1,47 @@
+UHumanTreeGameInstance::UHumanTreeGameInstance()
+{
+	DefaultSaveGameSlot = TEXT("_HumanTreeGame");
+}
+
+void UHumanTreeGameInstance::InitSaveGameSlot()
+{
+	if (!UGameplayStatics::DoesSaveGameExist(DefaultSaveGameSlot, 0))
+	{
+		if (InstanceGameData == nullptr)
+		{
+			InstanceGameData = Cast<UHumanTreeSaveGame>(UGameplayStatics::CreateSaveGameObject(UHumanTreeSaveGame::StaticClass()));
+		}
+		UGameplayStatics::SaveGameToSlot(InstanceGameData, DefaultSaveGameSlot, 0);
+	}
+	else
+	{
+		InstanceGameData = Cast<UHumanTreeSaveGame>(UGameplayStatics::LoadGameFromSlot(DefaultSaveGameSlot, 0));
+	}
+}
+
+void UHumanTreeGameInstance::Init()
+{
+	Super::Init();
+
+	InitSaveGameSlot();
+}
+
+bool UHumanTreeGameInstance::LoadCustomInt(FString FieldName, int32& Value)
+{
+	return InstanceGameData->LoadCustomInt(FieldName, Value);
+}
+
+void UHumanTreeGameInstance::SaveCustomInt(FString FieldName, int32 Value)
+{
+	InstanceGameData->SaveCustomInt(FieldName, Value);
+}
+
+void UHumanTreeGameInstance::ClearCustomInt(FString FieldName)
+{
+	InstanceGameData->ClearCustomInt(FieldName);
+}
+
+void UHumanTreeGameInstance::SaveGame()
+{
+	UGameplayStatics::SaveGameToSlot(InstanceGameData, DefaultSaveGameSlot, 0);
+}

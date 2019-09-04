@@ -1,0 +1,33 @@
+UCLASS(minimalapi)
+class AHumanTreeGameMode : public AGameModeBase
+{
+	GENERATED_BODY()
+
+public:
+	AHumanTreeGameMode();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound")
+		class UAudioComponent* AmbientAudioComp;
+
+	UFUNCTION(BlueprintCallable, category = "UMG")
+		void ChangeWidget(TSubclassOf<UUserWidget> NewWidgetClass);
+
+	bool bWinGame;
+
+	UFUNCTION(BlueprintCallable, Category = "Game")
+		void GameOver();
+
+	UFUNCTION(BlueprintCallable, Category = "Game")
+		void FallKill();
+protected:
+	virtual void BeginPlay() override;
+
+	UPROPERTY()
+		UUserWidget* CurrentWidget;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UMG")
+		TSubclassOf<UUserWidget> VictoryWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UMG")
+		TSubclassOf<UUserWidget> DefeatWidgetClass;
+};

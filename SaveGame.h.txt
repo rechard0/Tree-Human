@@ -1,0 +1,17 @@
+UCLASS()
+class HUMANTREE_API UHumanTreeSaveGame : public USaveGame
+{
+	GENERATED_BODY()
+	
+	
+public:
+	bool LoadCustomInt(FString FieldName, int32& Value) const;
+	
+	void SaveCustomInt(FString FieldName, int32 Value);
+
+	void ClearCustomInt(FString FieldName);
+
+protected:
+	UPROPERTY()
+		TMap<FString, int32> HumanTreeData;
+};

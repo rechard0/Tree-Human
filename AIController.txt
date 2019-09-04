@@ -1,0 +1,31 @@
+AEnemyAIController::AEnemyAIController()
+{
+	BehaviorComp = CreateDefaultSubobject<UBehaviorTreeComponent>(TEXT("BehaviorComp"));
+	BlackboardComp = CreateDefaultSubobject<UBlackboardComponent>(TEXT("BlackboradComp"));
+}
+
+void AEnemyAIController::Possess(APawn* InPawn)
+{
+	Super::Possess(InPawn);
+
+	AEnemyCharacter* Bot = Cast<AEnemyCharacter>(InPawn);
+
+	if (Bot && Bot->BotBehavior)
+	{
+		if (Bot->BotBehavior->BlackboardAsset)
+		{
+			BlackboardComp->InitializeBlackboard(*Bot->BotBehavior->BlackboardAsset);
+		}
+
+		BehaviorComp->StartTree(*(Bot->BotBehavior));
+	}
+}
+
+
+void AEnemyAIController::SetEnemy(class APawn* InPawn)
+{
+	if (BlackboardComp)
+	{
+		BlackboardComp->SetValue<UBlackboardKeyType_Object>("TargetEnemy", InPawn);
+	}
+}

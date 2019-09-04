@@ -1,0 +1,32 @@
+UCLASS()
+class HUMANTREE_API APickupActor : public AActor
+{
+	GENERATED_BODY()
+	
+public:	
+	APickupActor();
+
+	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
+	virtual void NotifyActorEndOverlap(AActor* OtherActor) override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+		FString Name;
+
+protected:
+	virtual void BeginPlay() override;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = "Mesh")
+		UStaticMeshComponent* MeshComp;
+
+	UPROPERTY(VisibleAnywhere, Category = "Collision")
+		class UBoxComponent* BoxCollisionComp;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WidgetComp")
+		class UWidgetComponent* WidgetComponent;
+
+public:	
+	virtual void Tick(float DeltaTime) override;
+
+	
+	
+};

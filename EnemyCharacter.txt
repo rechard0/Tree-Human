@@ -1,0 +1,227 @@
+AEnemyCharacter::AEnemyCharacter()
+{
+ 	
+	PrimaryActorTick.bCanEverTick = true;
+
+	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.f);
+
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> RobotModel(TEXT("SkeletalMesh'/Game/OakTreeEnt/Meshes/SK_OAK_TREE_ENT.SK_OAK_TREE_ENT'"));
+	GetMesh()->SetSkeletalMesh(RobotModel.Object);
+
+	PawnSensingComp = CreateDefaultSubobject<UPawnSensingComponent>(TEXT("PawnSensingComp"));
+	PawnSensingComp->SetPeripheralVisionAngle(80.0f);
+	PawnSensingComp->SightRadius = 800;
+
+	MeleeCollisionComp = CreateDefaultSubobject<UCapsuleComponent>(TEXT("MeleeCollision"));
+	MeleeCollisionComp->SetRelativeLocation(FVector(45, 0, 25));
+	MeleeCollisionComp->InitCapsuleSize(30.f, 70.f);
+	MeleeCollisionComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+	MeleeCollisionComp->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap);
+	MeleeCollisionComp->SetupAttachment(GetCapsuleComponent());
+
+	TreeHP = 100.0f;
+}
+
+
+void AEnemyCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	if (PawnSensingComp)
+	{
+		PawnSensingComp->OnSeePawn.AddDynamic(this, &AEnemyCharacter::OnSeePlayer);
+	}
+
+	if (MeleeCollisionComp)
+	{
+		MeleeCollisionComp->OnComponentBeginOverlap.AddDynamic(this, &AEnemyCharacter::OnMeleeCompBeginOverlap);
+	}
+}
+
+
+void AEnemyCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+
+}
+
+
+void AEnemyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+}
+
+float AEnemyCharacter::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	const float ActualDamage = Super::TakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+
+	if (ActualDamage > 0.f)
+	{
+		TreeHP -= ActualDamage;
+
+		UpdateHealthbar();
+
+		if (TreeHP <= 0)
+		{
+			Die(ActualDamage, DamageEvent, EventInstigator, DamageCauser);
+
+			UHumanTreeGameInstance* GameInstance = Cast<UHumanTreeGameInstance>(UGameplayStatics::GetGameInstance(this));
+			GameInstance->RemoveRobot += 1;
+		}
+		else
+		{
+			OnHit(ActualDamage, DamageEvent, EventInstigator ? EventInstigator->GetPawn() : NULL, DamageCauser);
+		}
+	}
+
+	return ActualDamage;
+}
+
+void AEnemyCharacter::OnSeePlayer(APawn* Pawn)
+{
+	AEnemyAIController* AIController = Cast<AEnemyAIController>(GetController());
+	AHumanTreeCharacter* SensedPawn = Cast<AHumanTreeCharacter>(Pawn);
+
+	LastSeenTime = GetWorld()->GetTimeSeconds();
+	bSensedTarget = true;
+
+	if (AIController && SensedPawn->PlayerHP > 0)
+	{
+		AIController->SetEnemy(SensedPawn);
+	}
+}
+
+void AEnemyCharacter::LookingForOverlapActor()
+{
+	TArray<AActor*> Overlaps;
+
+	MeleeCollisionComp->GetOverlappingActors(Overlaps, AHumanTreeCharacter::StaticClass());
+
+	for (int32 i = 0; i < Overlaps.Num(); i++)
+	{
+		AHumanTreeCharacter* OverlappingPawn = Cast<AHumanTreeCharacter>(Overlaps[i]);
+		if (OverlappingPawn)
+		{
+			ExecuteMeleeDamage(OverlappingPawn);
+		}
+	}
+}
+
+void AEnemyCharacter::OnMeleeCompBeginOverlap(class UPrimitiveComponent* OverlappedComponent, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult)
+{
+	ExecuteMeleeDamage(OtherActor);
+
+	FTimerHandle TimerHandle_MeleeAttack;
+	GetWorldTimerManager().SetTimer(TimerHandle_MeleeAttack, this, &AEnemyCharacter::LookingForOverlapActor, 2.f, true);
+}
+
+void AEnemyCharacter::ExecuteMeleeDamage(AActor* HitActor)
+{
+	AHumanTreeCharacter* PlayerPawn = Cast<AHumanTreeCharacter>(HitActor);
+
+	if (HitActor && HitActor != this && PlayerPawn->PlayerHP > 0)
+	{
+		if (PlayerPawn && TreeHP > 0)
+		{
+			PlayAnimMontage(MeleeAnimMontage);
+
+			if (SoundMelee)
+			{
+				UGameplayStatics::SpawnSoundAttached(SoundMelee, GetRootComponent());
+			}
+
+			float bMeleeDuring = GetMesh()->AnimScriptInstance->Montage_GetPlayRate(MeleeAnimMontage);
+
+			if (bMeleeDuring == 1)
+			{
+				FPointDamageEvent DmgEvent;
+
+				HitActor->TakeDamage(10, DmgEvent, GetController(), this);
+			}
+		}
+	}
+}
+
+void AEnemyCharacter::OnHit(float DamageTaken, struct FDamageEvent const& DamageEvent, class APawn* PawnInstigator, class AActor* DamageCauser)
+{
+	float bMeleeDuring = GetMesh()->AnimScriptInstance->Montage_GetPlayRate(MeleeAnimMontage);
+
+
+		PlayAnimMontage(TakeHitAnimMontage);
+
+	if (SoundTakeHit)
+	{
+		UGameplayStatics::SpawnSoundAttached(SoundTakeHit, RootComponent, NAME_None, FVector::ZeroVector, EAttachLocation::SnapToTarget, true);
+	}
+
+	if (TakeHitFX)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(this, TakeHitFX, GetActorLocation(), GetActorRotation());
+	}
+
+		if (DamageTaken > 0.f)
+		{
+			ApplyDamageMomentum(DamageTaken, DamageEvent, PawnInstigator, DamageCauser);
+		}
+
+}
+
+void AEnemyCharacter::Die(float KillingDamage, struct FDamageEvent const& DamageEvent, AController* Killer, AActor* DamageCauser)
+{
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+
+	if (GetCapsuleComponent())
+	{
+		GetCapsuleComponent()->BodyInstance.SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+	}
+
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->StopMovementImmediately();
+		GetCharacterMovement()->DisableMovement();
+	}
+
+	if (Controller != NULL)
+	{
+		Controller->UnPossess();
+	}
+
+	PlayAnimMontage(TakeHitAnimMontage);
+
+	SetRagdollPhysics();
+}
+
+void AEnemyCharacter::SetRagdollPhysics()
+{
+	GetMesh()->SetAllBodiesSimulatePhysics(true);
+	GetMesh()->SetSimulatePhysics(true);
+	GetMesh()->WakeAllRigidBodies();
+	GetMesh()->bBlendPhysics = true;
+
+	if (SoundDeath)
+	{
+		UGameplayStatics::SpawnSoundAttached(SoundDeath, RootComponent, NAME_None, FVector::ZeroVector, EAttachLocation::SnapToTarget, true);
+	}
+
+	if (DeathFX)
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(this, DeathFX, GetActorLocation(), GetActorRotation());
+	}
+
+	if (NameTag == "BigEnemy")
+	{
+		FTimerHandle TimerHandle_VictoryGame;
+		GetWorldTimerManager().SetTimer(TimerHandle_VictoryGame, this, &AEnemyCharacter::VictoryGame, 2, false);
+	}
+	SetLifeSpan(3.5f);
+}
+
+void AEnemyCharacter::VictoryGame()
+{
+	AHumanTreeGameMode* GameMode = Cast<AHumanTreeGameMode>(UGameplayStatics::GetGameMode(this));
+	GameMode->bWinGame = true;
+	GameMode->GameOver();
+}

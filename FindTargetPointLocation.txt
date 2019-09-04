@@ -1,0 +1,31 @@
+EBTNodeResult::Type UBTTask_FindTargetPointLocation::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
+{
+	AEnemyAIController* MyController = Cast<AEnemyAIController>(OwnerComp.GetOwner());
+
+	if (MyController == nullptr)
+	{
+		return EBTNodeResult::Failed;
+	}
+
+	AActor* NewTargetPoint = nullptr;
+
+	TArray<AActor*> AllTargetPoints;
+
+	UGameplayStatics::GetAllActorsOfClass(MyController, ABotTargetPoint::StaticClass(), AllTargetPoints);
+
+	if (AllTargetPoints.Num() == 0)
+	{
+		return EBTNodeResult::Failed;
+	}
+
+	NewTargetPoint = AllTargetPoints[FMath::RandRange(0, AllTargetPoints.Num() - 1)];
+
+	if (NewTargetPoint)
+	{
+		OwnerComp.GetBlackboardComponent()->SetValue<UBlackboardKeyType_Object>(BlackboardKey.GetSelectedKeyID(), NewTargetPoint);
+
+		return EBTNodeResult::Succeeded;
+	}
+
+	return EBTNodeResult::Failed;
+}

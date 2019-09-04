@@ -1,0 +1,270 @@
+AHumanTreeCharacter::AHumanTreeCharacter()
+{
+
+	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
+
+	BaseTurnRate = 45.f;
+	BaseLookUpRate = 45.f;
+
+
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationRoll = false;
+
+
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f);
+	GetCharacterMovement()->JumpZVelocity = 600.f;
+	GetCharacterMovement()->AirControl = 0.2f;
+
+
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+	CameraBoom->SetupAttachment(RootComponent);
+
+	CameraBoom->TargetArmLength = 900.0f; 
+	CameraBoom->bUsePawnControlRotation = false; 
+
+
+	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
+	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+	FollowCamera->bUsePawnControlRotation = false;
+	MaxHP = 1000.f;
+	ComboNumber = 0.f;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Input
+
+void AHumanTreeCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	SpawnDefaultInventory();
+
+	PlayerHP = MaxHP;
+}
+
+void AHumanTreeCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	FRotator MakrRotator = this->GetActorRotation() + FRotator(UpDownValue, LeftRightValue, 0.0f);
+
+	if (UpDownValue != 0.0f || LeftRightValue != 0.0f)
+	{
+		Controller->SetControlRotation(MakrRotator);
+
+		AddMovementInput(GetActorForwardVector(), UpDownValue);
+	}
+
+	if (BPUpDownValue != 0.0f || BPLeftRightValue != 0.0f)
+	{
+		AddMovementInput(GetActorForwardVector(), BPUpDownValue * DeltaTime);
+
+		FRotator NewRotation = this->GetActorRotation() + FRotator(BPUpDownValue, BPLeftRightValue, 0.0f);
+
+		Controller->SetControlRotation(NewRotation);
+	}
+}
+
+void AHumanTreeCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
+{
+
+	check(PlayerInputComponent);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+
+	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AHumanTreeCharacter::StartAttack);
+
+	PlayerInputComponent->BindAxis("UpDown", this, &AHumanTreeCharacter::UpDown);
+	PlayerInputComponent->BindAxis("LeftRight", this, &AHumanTreeCharacter::LeftRight);
+
+	PlayerInputComponent->BindTouch(IE_Pressed, this, &AHumanTreeCharacter::TouchStarted);
+	PlayerInputComponent->BindTouch(IE_Released, this, &AHumanTreeCharacter::TouchStopped);
+
+
+	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AHumanTreeCharacter::OnResetVR);
+}
+
+
+void AHumanTreeCharacter::OnResetVR()
+{
+	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
+}
+
+void AHumanTreeCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
+{
+		Jump();
+}
+
+void AHumanTreeCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
+{
+		StopJumping();
+}
+
+void AHumanTreeCharacter::SpawnDefaultInventory()
+{
+	FActorSpawnParameters SpawnInfo;
+
+	int32 NumWeaponClasses = WeaponClasses.Num();
+
+	for (int32 i = 0; i < NumWeaponClasses; i++)
+	{
+		if (WeaponClasses[i])
+		{
+			DefaultWeapon = GetWorld()->SpawnActor<ASword>(WeaponClasses[i], SpawnInfo);
+			AddWeapon(DefaultWeapon);
+		}
+	}
+
+	if (WeaponList.Num() > 0)
+	{
+		SetCurrentWeapon(WeaponList[0], CurrentWeapon);
+	}
+}
+
+void AHumanTreeCharacter::UpDown(float Value)
+{
+	UpDownValue = Value;
+}
+
+void AHumanTreeCharacter::LeftRight(float Value)
+{
+	LeftRightValue = Value;
+}
+
+void AHumanTreeCharacter::StartAttack()
+{
+	FTimerHandle TimerHandle_StopAttack;
+
+	if (PlayerHP > 0)
+	{
+		if (ComboNumber == 0)
+		{
+			if (IsAction4 == 0)
+			{
+				AnimDuration = PlayAnimMontage(AttackAnim1);
+			}
+			ComboNumber = 1;
+			if (AttackFX[0])
+			{
+				AttackFXComp = UGameplayStatics::SpawnEmitterAttached(AttackFX[0], CurrentWeapon->GetRootComponent(), "FXSocket");
+			}
+			GetWorldTimerManager().SetTimer(TimerHandle_StopAttack, this, &AHumanTreeCharacter::StopAttack, AnimDuration, false);
+		}
+		else if (ComboNumber == 1) {
+			if (IsAction1 == 0)
+			{
+				AnimDuration = PlayAnimMontage(AttackAnim2);
+			}
+			ComboNumber = 2;
+			if (AttackFX[1])
+			{
+				AttackFXComp = UGameplayStatics::SpawnEmitterAttached(AttackFX[1], CurrentWeapon->GetRootComponent(), "FXSocket");
+			}
+			GetWorldTimerManager().SetTimer(TimerHandle_StopAttack, this, &AHumanTreeCharacter::StopAttack, AnimDuration, false);
+		}
+		else if (ComboNumber == 2) {
+			if (IsAction2 == 0)
+			{
+				AnimDuration = PlayAnimMontage(AttackAnim3);
+			}
+			ComboNumber = 3;
+			if (AttackFX[2])
+			{
+				AttackFXComp = UGameplayStatics::SpawnEmitterAttached(AttackFX[2], CurrentWeapon->GetRootComponent(), "FXSocket");
+			}
+			GetWorldTimerManager().SetTimer(TimerHandle_StopAttack, this, &AHumanTreeCharacter::StopAttack, AnimDuration, false);
+		}
+		else if (ComboNumber == 3) {
+			if (IsAction3 == 0)
+			{
+				AnimDuration = PlayAnimMontage(AttackAnim4);
+			}
+			ComboNumber = 0;
+			if (AttackFX[3])
+			{
+				AttackFXComp = UGameplayStatics::SpawnEmitterAttached(AttackFX[3], CurrentWeapon->GetRootComponent(), "FXSocket");
+			}
+			GetWorldTimerManager().SetTimer(TimerHandle_StopAttack, this, &AHumanTreeCharacter::StopAttack, AnimDuration, false);
+		}
+		if (SoundAttack)
+		{
+			UGameplayStatics::SpawnSoundAttached(SoundAttack, GetRootComponent());
+		}
+	}
+}
+
+void AHumanTreeCharacter::StopAttack()
+{
+	IsAction1 = GetMesh()->AnimScriptInstance->Montage_GetPlayRate(AttackAnim1);
+	IsAction2 = GetMesh()->AnimScriptInstance->Montage_GetPlayRate(AttackAnim2);
+	IsAction3 = GetMesh()->AnimScriptInstance->Montage_GetPlayRate(AttackAnim3);
+	IsAction4 = GetMesh()->AnimScriptInstance->Montage_GetPlayRate(AttackAnim4);
+
+	if (IsAction1 == 0 && IsAction2 == 0 && IsAction3 == 0 && IsAction4 == 0)
+	{
+		ComboNumber = 0;
+	}
+}
+
+void AHumanTreeCharacter::BPUpDown(float Value)
+{
+	BPUpDownValue = Value;
+}
+
+void AHumanTreeCharacter::BPLeftRight(float Value)
+{
+	BPLeftRightValue = Value;
+}
+
+void AHumanTreeCharacter::PutOnArmor()
+{
+	FActorSpawnParameters SpawnInfo;
+	DefaultArmor = GetWorld()->SpawnActor<AArmor>(ArmorClass, SpawnInfo);
+	DefaultArmor->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, "ArmorSocket");
+}
+
+void AHumanTreeCharacter::TakeOffArmor()
+{
+	DefaultArmor->RemoveArmor();
+}
+
+void AHumanTreeCharacter::AddWeapon(ASword* Sword)
+{
+	if (Sword)
+	{
+		WeaponList.AddUnique(Sword);
+	}
+}
+
+void AHumanTreeCharacter::SetCurrentWeapon(class ASword* NewWeapon, class ASword* LastWeapon)
+{
+	ASword* LocalLastWeapon = NULL;
+
+	if (LastWeapon != NULL)
+	{
+		LocalLastWeapon = LastWeapon;
+	}
+	else if (NewWeapon != CurrentWeapon)
+	{
+		LocalLastWeapon = CurrentWeapon;
+	}
+
+	if (LocalLastWeapon)
+	{
+		LocalLastWeapon->OnUnEquip();
+	}
+	CurrentWeapon = NewWeapon;
+
+	if (NewWeapon)
+	{
+		NewWeapon->SetOwningPawn(this);
+		NewWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, "WeaponSocket");
+	}
+}
+
+void AHumanTreeCharacter::ChangeSword(int32 InNum)
+{
+	SetCurrentWeapon(WeaponList[InNum], CurrentWeapon);
+}

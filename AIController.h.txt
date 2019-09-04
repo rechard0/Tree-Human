@@ -1,0 +1,16 @@
+class UBehaviorTreeComponent; class UBlackboardComponent;
+UCLASS()
+class HUMANTREE_API AEnemyAIController : public AAIController
+{
+	GENERATED_BODY()
+
+	virtual void Possess(class APawn* InPawn) override;
+
+	UBehaviorTreeComponent* BehaviorComp;
+	UBlackboardComponent* BlackboardComp;
+
+	AEnemyAIController();
+
+public:
+	void SetEnemy(class APawn* InPawn);
+};

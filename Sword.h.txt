@@ -1,0 +1,29 @@
+UCLASS()
+class HUMANTREE_API ASword : public AActor
+{
+	GENERATED_BODY()
+	
+public:	
+	ASword();
+
+protected:
+	virtual void BeginPlay() override;
+
+	class AHumanTreeCharacter* MyPawn;
+
+public:	
+	virtual void Tick(float DeltaTime) override;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = Weapon)
+		class USkeletalMeshComponent* SwordMesh;
+
+	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
+
+	void SetOwningPawn(AHumanTreeCharacter* NewOwner);
+
+	void OnUnEquip();
+
+private:
+	UPROPERTY(VisibleAnyWhere, Category = Weapon)
+		class UCapsuleComponent* SwordCollision;
+};

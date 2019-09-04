@@ -1,0 +1,21 @@
+bool UHumanTreeSaveGame::LoadCustomInt(FString FieldName, int32& Value) const
+{
+	const int32* ValuePointer = HumanTreeData.Find(FieldName);
+
+	if (ValuePointer != nullptr)
+	{
+		Value = *ValuePointer;
+		return true;
+	}
+	return false;
+}
+
+void UHumanTreeSaveGame::SaveCustomInt(FString FieldName, int32 Value)
+{
+	HumanTreeData.FindOrAdd(FieldName) = Value;
+}
+
+void UHumanTreeSaveGame::ClearCustomInt(FString FieldName)
+{
+	HumanTreeData.Remove(FieldName);
+}

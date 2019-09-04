@@ -1,0 +1,13 @@
+UCLASS()
+class HUMANTREE_API UItemUserWidget : public UUserWidget
+{
+	GENERATED_BODY()
+	
+public:
+	virtual TSharedRef<SWidget> RebuildWidget();
+	UBorder* BorderWidget;
+	UTextBlock* NameWidget;
+	
+	UFUNCTION()
+		void SetName(FString Name);
+};

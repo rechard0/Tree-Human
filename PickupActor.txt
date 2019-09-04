@@ -1,0 +1,67 @@
+APickupActor::APickupActor()
+{
+	PrimaryActorTick.bCanEverTick = true;
+
+	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
+	RootComponent = MeshComp;
+
+	BoxCollisionComp = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollisionComp"));
+	BoxCollisionComp->InitBoxExtent(FVector(30.0f, 30.0f, 20.0f));
+	BoxCollisionComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+	BoxCollisionComp->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap);
+	BoxCollisionComp->SetupAttachment(RootComponent);
+
+	WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("WidgetComponent"));
+	WidgetComponent->SetupAttachment(RootComponent);
+	WidgetComponent->SetWidgetClass(UItemUserWidget::StaticClass());
+	WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	WidgetComponent->SetDrawAtDesiredSize(true);
+}
+
+void APickupActor::BeginPlay()
+{
+	Super::BeginPlay();
+	
+}
+
+void APickupActor::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+}
+
+void APickupActor::NotifyActorBeginOverlap(AActor* OtherActor)
+{
+	Super::NotifyActorBeginOverlap(OtherActor);
+
+	if (OtherActor->IsA(AActor::StaticClass()))
+	{
+		MeshComp->DestroyComponent();
+
+		UHumanTreeGameInstance* GameInstance = Cast<UHumanTreeGameInstance>(UGameplayStatics::GetGameInstance(this));
+		GameInstance->LoadCustomInt("Score", GameInstance->TestScore);
+		GameInstance->TestScore += 10;
+		GameInstance->SaveCustomInt("Score", GameInstance->TestScore);
+		GameInstance->SaveGame();
+
+		WidgetComponent->SetVisibility(true);
+
+		UItemUserWidget* Widget = Cast<UItemUserWidget>(WidgetComponent->GetUserWidgetObject());
+		if (Widget)
+		{
+			Widget->SetName(Name);
+		}
+	}
+}
+
+void APickupActor::NotifyActorEndOverlap(AActor* OtherActor)
+{
+	Super::NotifyActorEndOverlap(OtherActor);
+
+	if (OtherActor->IsA(StaticClass()))
+	{
+		BoxCollisionComp->DestroyComponent();
+
+		WidgetComponent->DestroyComponent();
+	}
+}

@@ -1,0 +1,34 @@
+TSharedRef<SWidget> UItemUserWidget::RebuildWidget()
+{
+	UPanelWidget* RootWidget = Cast<UPanelWidget>(GetRootWidget());
+
+	if (!RootWidget)
+	{
+		RootWidget = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), (TEXT("Root")));
+		WidgetTree->RootWidget = RootWidget;
+	}
+
+	if (RootWidget && WidgetTree)
+	{
+		BorderWidget = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), (TEXT("Border")));
+		NameWidget = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), (TEXT("Name")));
+
+		RootWidget->AddChild(BorderWidget);
+		BorderWidget->AddChild(NameWidget);
+
+		UCanvasPanelSlot* BorderSlot = Cast<UCanvasPanelSlot>(BorderWidget->Slot);
+		BorderSlot->SetSize(FVector2D(100, 30));
+		FLinearColor BorderColor(0.f, 0.f, 0.f, 0.2f);
+		BorderWidget->SetBrushColor(BorderColor);
+		FMargin Padding(10.f, 4.f, 10.f, 4.f);
+		BorderWidget->SetPadding(Padding);
+	}
+
+	TSharedRef<SWidget> Widget = Super::RebuildWidget();
+	return Widget;
+}
+
+void UItemUserWidget::SetName(FString Name)
+{
+	NameWidget->SetText(FText::FromString(Name));
+}

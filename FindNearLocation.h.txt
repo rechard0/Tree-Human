@@ -1,0 +1,10 @@
+UCLASS()
+class HUMANTREE_API UBTTask_FindNearLocation : public UBTTask_BlackboardBase
+{
+	GENERATED_BODY()
+	
+public:
+	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
+	
+	
+};

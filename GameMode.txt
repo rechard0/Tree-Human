@@ -1,0 +1,69 @@
+AHumanTreeGameMode::AHumanTreeGameMode()
+{
+	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/HumanTree/Blueprint/PlayerCharacter"));
+	if (PlayerPawnBPClass.Class != NULL)
+	{
+		DefaultPawnClass = PlayerPawnBPClass.Class;
+	}
+
+	static ConstructorHelpers::FObjectFinder<USoundCue> SoundAmbient(TEXT("SoundCue'/Game/HumanTree/Sound/AmbientSoundCue.AmbientSoundCue'"));
+	AmbientAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("AmbientAudioComp"));
+	AmbientAudioComp->SetupAttachment(RootComponent);
+	AmbientAudioComp->SetRelativeLocation(FVector(0.0f, 0.0f, -60.f));
+
+	if (SoundAmbient.Object->IsValidLowLevelFast())
+	{
+		AmbientAudioComp->SetSound(SoundAmbient.Object);
+	}
+}
+
+void AHumanTreeGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+
+	AmbientAudioComp->Play();
+}
+
+void AHumanTreeGameMode::ChangeWidget(TSubclassOf<UUserWidget> NewWidgetClass)
+{
+	if (CurrentWidget != nullptr)
+	{
+		CurrentWidget->RemoveFromViewport();
+		CurrentWidget = nullptr;
+	}
+
+	if (NewWidgetClass != nullptr)
+	{
+		CurrentWidget = CreateWidget<UUserWidget>(GetWorld(), NewWidgetClass);
+
+		if (CurrentWidget)
+		{
+			CurrentWidget->AddToViewport();
+		}
+	}
+}
+
+void AHumanTreeGameMode::GameOver()
+{
+	APlayerController* MyPC = Cast<APlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+	if (MyPC)
+	{
+		MyPC->SetPause(true);
+	}
+	ChangeWidget(bWinGame ? VictoryWidgetClass : DefeatWidgetClass);
+}
+
+void AHumanTreeGameMode::FallKill()
+{
+	for (FConstPawnIterator It = GetWorld()->GetPawnIterator(); It; ++It)
+	{
+		ACharacter* AllPawn = Cast<ACharacter>(*It);
+		float CharacterVelocityZ = AllPawn->GetCharacterMovement()->Velocity.Z;
+
+		if (CharacterVelocityZ < -1100.f)
+		{
+			FPointDamageEvent DmgEvent;
+			AllPawn->TakeDamage(1000, DmgEvent, GetInstigatorController(), this);
+		}
+	}
+}

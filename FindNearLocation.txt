@@ -1,0 +1,24 @@
+EBTNodeResult::Type UBTTask_FindNearLocation::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
+{
+	const UNavigationSystem* NavSys = UNavigationSystem::GetCurrent(GetWorld());
+
+	AEnemyAIController* MyController = Cast<AEnemyAIController>(OwnerComp.GetAIOwner());
+
+	if (NavSys && MyController && MyController->GetPawn())
+	{
+		const float SearchRadius = 300.f;
+
+		FNavLocation RandomPt;
+
+		const bool bFound = NavSys->GetRandomPointInNavigableRadius(MyController->GetPawn()->GetActorLocation(), SearchRadius, RandomPt);
+
+		if (bFound)
+		{
+			OwnerComp.GetBlackboardComponent()->SetValue<UBlackboardKeyType_Vector>(GetSelectedBlackboardKey(), RandomPt.Location);
+
+			return EBTNodeResult::Succeeded;
+		}
+	}
+
+	return EBTNodeResult::Failed;
+}

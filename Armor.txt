@@ -1,0 +1,30 @@
+
+AArmor::AArmor()
+{
+ 	
+	PrimaryActorTick.bCanEverTick = true;
+
+	ArmorMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ArmorMesh"));
+	RootComponent = ArmorMesh;
+
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh>Armor_Path(TEXT("SkeletalMesh'/Game/HumanTree/Armor/Armor.Armor'"));
+	ArmorMesh->SetSkeletalMesh(Armor_Path.Object);
+}
+
+void AArmor::BeginPlay()
+{
+	Super::BeginPlay();
+	
+}
+
+void AArmor::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+}
+
+void AArmor::RemoveArmor()
+{
+	ArmorMesh->DetachFromComponent(FDetachmentTransformRules::KeepRelativeTransform);
+	ArmorMesh->SetHiddenInGame(true);
+}
